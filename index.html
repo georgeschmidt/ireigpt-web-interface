@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iREI GPT - Multi-User Chat Interface</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { padding: 20px; background: #0078d4; color: white; border-radius: 10px 10px 0 0; }
+        .chat-container { height: 400px; overflow-y: auto; padding: 20px; border-bottom: 1px solid #eee; }
+        .message { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .user-message { background: #e3f2fd; margin-left: 20%; }
+        .bot-message { background: #f0f0f0; margin-right: 20%; }
+        .input-area { padding: 20px; display: flex; gap: 10px; }
+        .input-area input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .input-area button { padding: 10px 20px; background: #0078d4; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .auth-section { padding: 20px; text-align: center; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>iREI GPT - Multi-User Interface</h1>
+            <div id="user-info" class="hidden">Welcome, <span id="username"></span> | <button onclick="logout()">Logout</button></div>
+        </div>
+        
+        <div id="auth-section" class="auth-section">
+            <h2>Please sign in to continue</h2>
+            <a href="/.auth/login/github" class="button">Login with GitHub</a>
+        </div>
+        
+        <div id="chat-section" class="hidden">
+            <div id="chat-container" class="chat-container"></div>
+            <div class="input-area">
+                <input type="text" id="message-input" placeholder="Type your message here..." />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication status and load chat if authenticated
+        fetch('/.auth/me')
+            .then(response => response.json())
+            .then(data => {
+                if (data.clientPrincipal) {
+                    showChat(data.clientPrincipal);
+                    loadChatHistory();
+                } else {
+                    showAuth();
+                }
+            });
+
+        function showAuth() {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('chat-section').classList.add('hidden');
+        }
+
+        function showChat(user) {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('chat-section').classList.remove('hidden');
+            document.getElementById('user-info').classList.remove('hidden');
+            document.getElementById('username').textContent = user.userDetails;
+        }
+
+        function logout() {
+            window.location.href = '/.auth/logout';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const data = await response.json();
+                addMessage(data.response, 'bot');
+            } catch (error) {
+                addMessage('Error: Unable to get response', 'bot');
+            }
+        }
+
+        function addMessage(text, sender) {
+            const container = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = text;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function loadChatHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const history = await response.json();
+                history.forEach(msg => addMessage(msg.content, msg.role));
+            } catch (error) {
+                console.log('No chat history found');
+            }
+        }
+
+        // Allow Enter key to send message
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>

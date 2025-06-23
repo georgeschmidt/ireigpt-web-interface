@@ -1,0 +1,15 @@
+{
+  "name": "ireigpt-api",
+  "version": "1.0.0",
+  "description": "API functions for iREI GPT multi-user interface",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.0.0"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}
